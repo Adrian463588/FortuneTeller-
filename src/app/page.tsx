@@ -18,6 +18,7 @@ export default function Home() {
     fullName: string;
     dateOfBirth: string;
     timeOfBirth: string;
+    gender: "male" | "female";
   }) => {
     setState("loading");
 
@@ -28,6 +29,7 @@ export default function Home() {
       fullName: data.fullName,
       dateOfBirth: new Date(data.dateOfBirth),
       timeOfBirth: data.timeOfBirth || undefined,
+      gender: data.gender,
     });
 
     setReading(result);

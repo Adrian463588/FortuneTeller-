@@ -6,6 +6,17 @@ import {
   BaZiResult,
   WetonResult,
   NumerologyResult,
+  FengShuiResult,
+  MisfortuneIndex,
+  MortalityTheme,
+  AdviceItem,
+  DecadeStrategy,
+  DirectionInfo,
+  FengShuiDirection,
+  TenGodRelation,
+  TenGodName,
+  ShenShaEntry,
+  YongShenResult,
   Pillar,
   HeavenlyStem,
   EarthlyBranch,
@@ -23,7 +34,7 @@ import {
 // DETERMINISTIC SEED GENERATOR
 // ═══════════════════════════════════════════════════════════════
 
-function hashString(str: string): number {
+export function hashString(str: string): number {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
@@ -31,7 +42,7 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-class SeededRandom {
+export class SeededRandom {
   private seed: number;
   constructor(seed: number) {
     this.seed = seed;
@@ -60,7 +71,7 @@ class SeededRandom {
 // LOOKUP TABLES
 // ═══════════════════════════════════════════════════════════════
 
-const HEAVENLY_STEMS: { name: HeavenlyStem; chinese: string; element: FiveElement }[] = [
+export const HEAVENLY_STEMS: { name: HeavenlyStem; chinese: string; element: FiveElement }[] = [
   { name: "Jia", chinese: "甲", element: "Wood" },
   { name: "Yi", chinese: "乙", element: "Wood" },
   { name: "Bing", chinese: "丙", element: "Fire" },
@@ -73,7 +84,7 @@ const HEAVENLY_STEMS: { name: HeavenlyStem; chinese: string; element: FiveElemen
   { name: "Gui", chinese: "癸", element: "Water" },
 ];
 
-const EARTHLY_BRANCHES: { name: EarthlyBranch; chinese: string; element: FiveElement; animal: string }[] = [
+export const EARTHLY_BRANCHES: { name: EarthlyBranch; chinese: string; element: FiveElement; animal: string }[] = [
   { name: "Zi", chinese: "子", element: "Water", animal: "Rat" },
   { name: "Chou", chinese: "丑", element: "Earth", animal: "Ox" },
   { name: "Yin", chinese: "寅", element: "Wood", animal: "Tiger" },
@@ -284,7 +295,7 @@ const DAY_NAMES_JAVANESE: Record<DayOfWeek, string> = {
 // WESTERN ZODIAC CALCULATOR
 // ═══════════════════════════════════════════════════════════════
 
-function getWesternZodiac(month: number, day: number): WesternZodiac {
+export function getWesternZodiac(month: number, day: number): WesternZodiac {
   let sign: string;
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) sign = "Aries";
   else if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) sign = "Taurus";
@@ -306,7 +317,7 @@ function getWesternZodiac(month: number, day: number): WesternZodiac {
 // CHINESE ZODIAC CALCULATOR
 // ═══════════════════════════════════════════════════════════════
 
-function getChineseZodiac(year: number): ChineseZodiac {
+export function getChineseZodiac(year: number): ChineseZodiac {
   const animalIndex = (year - 4) % 12;
   const animal = CHINESE_ZODIAC_ANIMALS[animalIndex >= 0 ? animalIndex : animalIndex + 12];
   const elementIndex = Math.floor(((year - 4) % 10) / 2);
@@ -328,7 +339,7 @@ function getChineseZodiac(year: number): ChineseZodiac {
 // BAZI / SAJU PALJA (FOUR PILLARS) CALCULATOR
 // ═══════════════════════════════════════════════════════════════
 
-function getStemBranch(stemIdx: number, branchIdx: number): Pillar {
+export function getStemBranch(stemIdx: number, branchIdx: number): Pillar {
   const si = ((stemIdx % 10) + 10) % 10;
   const bi = ((branchIdx % 12) + 12) % 12;
   const stem = HEAVENLY_STEMS[si];
@@ -343,7 +354,280 @@ function getStemBranch(stemIdx: number, branchIdx: number): Pillar {
   };
 }
 
-function calculateBaZi(year: number, month: number, day: number, hour: number, rng: SeededRandom): BaZiResult {
+// ─── Ten Gods (十神 / Shi Shen) Calculator ─────────────────────
+
+const ELEMENT_ORDER: FiveElement[] = ["Wood", "Fire", "Earth", "Metal", "Water"];
+
+function getElementIndex(el: FiveElement): number {
+  return ELEMENT_ORDER.indexOf(el);
+}
+
+// Productive cycle: Wood→Fire→Earth→Metal→Water→Wood
+// Destructive cycle: Wood→Earth→Water→Fire→Metal→Wood
+
+function getTenGodRelation(dayMasterElement: FiveElement, dayMasterStemIdx: number, targetElement: FiveElement, targetStemIdx: number): { relation: TenGodName; chinese: string; english: string; meaning: string } {
+  const dmIdx = getElementIndex(dayMasterElement);
+  const tIdx = getElementIndex(targetElement);
+  const samePolarity = (dayMasterStemIdx % 2) === (targetStemIdx % 2);
+
+  // Same element
+  if (dmIdx === tIdx) {
+    return samePolarity
+      ? { relation: "Bi Jian", chinese: "比肩", english: "Friend (Shoulder)", meaning: "Peer support, independence, self-reliance. You attract allies who mirror your energy." }
+      : { relation: "Jie Cai", chinese: "劫财", english: "Rob Wealth", meaning: "Competition, rivalry, unexpected expenses. Can indicate boldness and entrepreneurial drive." };
+  }
+  // Day Master produces target (productive cycle +1)
+  if ((dmIdx + 1) % 5 === tIdx) {
+    return samePolarity
+      ? { relation: "Shi Shen", chinese: "食神", english: "Eating God", meaning: "Creativity, enjoyment, talent expression. A gentle outpouring of your inner gifts." }
+      : { relation: "Shang Guan", chinese: "伤官", english: "Hurting Officer", meaning: "Rebellion, brilliance, unconventional thinking. Sharp intelligence that challenges authority." };
+  }
+  // Day Master's produce produces target (+2)
+  if ((dmIdx + 2) % 5 === tIdx) {
+    return samePolarity
+      ? { relation: "Pian Cai", chinese: "偏财", english: "Indirect Wealth", meaning: "Windfall income, social wealth, generosity. Money flows through connections and opportunity." }
+      : { relation: "Zheng Cai", chinese: "正财", english: "Direct Wealth", meaning: "Steady income, frugality, earned prosperity. Wealth built through diligence and responsibility." };
+  }
+  // Target controls Day Master (destructive cycle)
+  if ((tIdx + 1) % 5 === (dmIdx + 3) % 5 || (dmIdx + 3) % 5 === tIdx) {
+    // Target destroys Day Master → Officer/7 Killings
+    if ((tIdx + 2) % 5 === dmIdx || (dmIdx + 3) % 5 === tIdx) {
+      return samePolarity
+        ? { relation: "Qi Sha", chinese: "七杀", english: "Seven Killings", meaning: "Intense pressure, power, ambition. A fierce driving force that forges resilience and authority." }
+        : { relation: "Zheng Guan", chinese: "正官", english: "Direct Officer", meaning: "Discipline, status, career authority. Upright leadership and recognition from structure." };
+    }
+  }
+  // Target produces Day Master (resource)
+  if ((tIdx + 1) % 5 === dmIdx) {
+    return samePolarity
+      ? { relation: "Pian Yin", chinese: "偏印", english: "Indirect Seal", meaning: "Unconventional knowledge, spiritual insight, alternative learning. Wisdom from hidden sources." }
+      : { relation: "Zheng Yin", chinese: "正印", english: "Direct Seal", meaning: "Education, nurturing, protection. Support from elders, mentors, and traditional knowledge." };
+  }
+
+  // Fallback: controlling relationship
+  return samePolarity
+    ? { relation: "Qi Sha", chinese: "七杀", english: "Seven Killings", meaning: "Intense pressure and transformation. A catalyst for personal power and resilience." }
+    : { relation: "Zheng Guan", chinese: "正官", english: "Direct Officer", meaning: "Authority, structure, and disciplined advancement. Recognition through proper channels." };
+}
+
+function calculateTenGods(dayMasterStemIdx: number, yearPillar: Pillar, monthPillar: Pillar, dayPillar: Pillar, hourPillar: Pillar): TenGodRelation[] {
+  const dmStem = HEAVENLY_STEMS[((dayMasterStemIdx % 10) + 10) % 10];
+  const pillarEntries: { pillar: Pillar; name: "year" | "month" | "day" | "hour" }[] = [
+    { pillar: yearPillar, name: "year" },
+    { pillar: monthPillar, name: "month" },
+    { pillar: dayPillar, name: "day" },
+    { pillar: hourPillar, name: "hour" },
+  ];
+
+  const results: TenGodRelation[] = [];
+  for (const entry of pillarEntries) {
+    // Stem of each pillar (skip day stem — it IS the Day Master)
+    if (entry.name !== "day") {
+      const targetStemIdx = HEAVENLY_STEMS.findIndex(s => s.name === entry.pillar.heavenlyStem);
+      const targetStem = HEAVENLY_STEMS[targetStemIdx];
+      const rel = getTenGodRelation(dmStem.element, ((dayMasterStemIdx % 10) + 10) % 10, targetStem.element, targetStemIdx);
+      results.push({
+        stem: targetStem.name,
+        stemChinese: targetStem.chinese,
+        element: targetStem.element,
+        relation: rel.relation,
+        chinese: rel.chinese,
+        english: rel.english,
+        meaning: rel.meaning,
+        pillar: entry.name,
+      });
+    }
+  }
+  return results;
+}
+
+// ─── Shen Sha (神煞 / Symbolic Stars) Identifier ──────────────
+
+interface ShenShaRule {
+  name: string;
+  chinese: string;
+  type: "auspicious" | "inauspicious" | "neutral";
+  meaning: string;
+  check: (yearBranch: number, monthBranch: number, dayBranch: number, hourBranch: number, dayStem: number) => string | null;
+}
+
+const SHEN_SHA_RULES: ShenShaRule[] = [
+  {
+    name: "Tian Yi Noble",
+    chinese: "天乙贵人",
+    type: "auspicious",
+    meaning: "The Heavenly Noble Star brings helpful people, mentors, and timely assistance into your life. Obstacles resolve through unexpected aid.",
+    check: (yb, mb, db, hb, ds) => {
+      const nobleMap: Record<number, number[]> = { 0: [1,7], 1: [0,6], 2: [9,5], 3: [11,5], 4: [1,7], 5: [0,8], 6: [7,1], 7: [6,10], 8: [3,9], 9: [3,9] };
+      const nobles = nobleMap[ds] || [];
+      if (nobles.includes(yb)) return "Year Branch";
+      if (nobles.includes(mb)) return "Month Branch";
+      if (nobles.includes(db)) return "Day Branch";
+      if (nobles.includes(hb)) return "Hour Branch";
+      return null;
+    },
+  },
+  {
+    name: "Peach Blossom",
+    chinese: "桃花",
+    type: "neutral",
+    meaning: "The Peach Blossom Star enhances romantic attraction, charisma, and social charm. It can indicate popularity or romantic entanglements.",
+    check: (yb, _mb, db) => {
+      const peachMap: Record<number, number> = { 0: 9, 1: 6, 2: 3, 3: 0, 4: 9, 5: 6, 6: 3, 7: 0, 8: 9, 9: 6, 10: 3, 11: 0 };
+      if (peachMap[yb] === db) return "Year→Day";
+      return null;
+    },
+  },
+  {
+    name: "Academic Star",
+    chinese: "文昌",
+    type: "auspicious",
+    meaning: "The Academic Star favours intellectual pursuits, examinations, writing, and scholarly achievement. Excellent for education and research.",
+    check: (_yb, _mb, _db, _hb, ds) => {
+      const academicBranch: Record<number, number> = { 0: 5, 1: 6, 2: 8, 3: 9, 4: 8, 5: 9, 6: 11, 7: 0, 8: 2, 9: 3 };
+      const target = academicBranch[ds];
+      if (target === _db) return "Day Branch";
+      if (target === _hb) return "Hour Branch";
+      return null;
+    },
+  },
+  {
+    name: "Travelling Horse",
+    chinese: "驿马",
+    type: "neutral",
+    meaning: "The Travelling Horse Star signals movement, change, travel, and career relocation. A dynamic energy that resists stagnation.",
+    check: (yb, _mb, db) => {
+      const horseMap: Record<number, number> = { 0: 2, 1: 11, 2: 8, 3: 5, 4: 2, 5: 11, 6: 8, 7: 5, 8: 2, 9: 11, 10: 8, 11: 5};
+      if (horseMap[yb] === db) return "Year→Day";
+      return null;
+    },
+  },
+  {
+    name: "Sky Virtue",
+    chinese: "天德",
+    type: "auspicious",
+    meaning: "The Sky Virtue Star brings moral fortitude, ancestral protection, and the ability to turn danger into opportunity.",
+    check: (_yb, mb) => {
+      const virtueMonth = [3, 8, 1, 6, 3, 8, 1, 6, 3, 8, 1, 6];
+      if (virtueMonth[mb % 12] === mb) return "Month Branch";
+      return null;
+    },
+  },
+  {
+    name: "Funeral Gate",
+    chinese: "丧门",
+    type: "inauspicious",
+    meaning: "The Funeral Gate Star warns of potential grief, loss, or emotional upheaval. Extra care for health and relationships is advised.",
+    check: (yb, _mb, _db, _hb) => {
+      const funeralOffset = (yb + 2) % 12;
+      if (funeralOffset === _db) return "Year→Day";
+      return null;
+    },
+  },
+  {
+    name: "Robbery Sha",
+    chinese: "劫煞",
+    type: "inauspicious",
+    meaning: "The Robbery Sha warns of financial loss, theft, or betrayal. Caution with investments and trust during this influence.",
+    check: (yb, _mb, db) => {
+      const robberyMap: Record<number, number> = { 0: 5, 1: 2, 2: 11, 3: 8, 4: 5, 5: 2, 6: 11, 7: 8, 8: 5, 9: 2, 10: 11, 11: 8 };
+      if (robberyMap[yb] === db) return "Year→Day";
+      return null;
+    },
+  },
+  {
+    name: "Longevity Star",
+    chinese: "长生",
+    type: "auspicious",
+    meaning: "The Longevity Star signals vitality, perseverance, and the potential for a long, healthy life. New beginnings are favoured.",
+    check: (_yb, _mb, _db, _hb, ds) => {
+      const longMap: Record<number, number> = { 0: 11, 1: 6, 2: 2, 3: 9, 4: 2, 5: 9, 6: 5, 7: 0, 8: 8, 9: 3 };
+      if (longMap[ds] === _db) return "Day Branch";
+      return null;
+    },
+  },
+  {
+    name: "Heavenly Kitchen",
+    chinese: "天厨",
+    type: "auspicious",
+    meaning: "The Heavenly Kitchen Star brings abundance in food, resources, and material comfort. Especially favourable for hospitality and culinary pursuits.",
+    check: (_yb, _mb, _db, _hb, ds) => {
+      const kitchenMap: Record<number, number> = { 0: 5, 1: 6, 2: 5, 3: 6, 4: 5, 5: 6, 6: 11, 7: 0, 8: 11, 9: 0 };
+      if (kitchenMap[ds] === _db) return "Day Branch";
+      return null;
+    },
+  },
+  {
+    name: "Solitary Star",
+    chinese: "孤辰",
+    type: "inauspicious",
+    meaning: "The Solitary Star indicates periods of loneliness, independence by necessity, or difficulty forming partnerships. Self-reliance becomes crucial.",
+    check: (yb, _mb, db) => {
+      const solitaryMap: Record<number, number> = { 0: 2, 1: 2, 2: 5, 3: 5, 4: 5, 5: 8, 6: 8, 7: 8, 8: 11, 9: 11, 10: 11, 11: 2 };
+      if (solitaryMap[yb] === db) return "Year→Day";
+      return null;
+    },
+  },
+];
+
+function identifyShenSha(yearStemIdx: number, yearBranchIdx: number, monthBranchIdx: number, dayBranchIdx: number, hourBranchIdx: number, dayStemIdx: number): ShenShaEntry[] {
+  const results: ShenShaEntry[] = [];
+  const yb = ((yearBranchIdx % 12) + 12) % 12;
+  const mb = ((monthBranchIdx % 12) + 12) % 12;
+  const db = ((dayBranchIdx % 12) + 12) % 12;
+  const hb = ((hourBranchIdx % 12) + 12) % 12;
+  const ds = ((dayStemIdx % 10) + 10) % 10;
+
+  for (const rule of SHEN_SHA_RULES) {
+    const trigger = rule.check(yb, mb, db, hb, ds);
+    if (trigger) {
+      results.push({
+        name: rule.name,
+        chinese: rule.chinese,
+        type: rule.type,
+        meaning: rule.meaning,
+        triggerPillar: trigger,
+      });
+    }
+  }
+  return results;
+}
+
+// ─── Yong Shen (用神 / Useful God) Calculator ─────────────────
+
+function calculateYongShen(balance: Record<FiveElement, number>, dayMaster: FiveElement, dominant: FiveElement, weakest: FiveElement): YongShenResult {
+  // Productive cycle: Wood→Fire→Earth→Metal→Water→Wood
+  const produces: Record<FiveElement, FiveElement> = { Wood: "Fire", Fire: "Earth", Earth: "Metal", Metal: "Water", Water: "Wood" };
+  // Controlling cycle: Wood→Earth, Earth→Water, Water→Fire, Fire→Metal, Metal→Wood
+  const controls: Record<FiveElement, FiveElement> = { Wood: "Earth", Fire: "Metal", Earth: "Water", Metal: "Wood", Water: "Fire" };
+  const controlledBy: Record<FiveElement, FiveElement> = { Wood: "Metal", Fire: "Water", Earth: "Wood", Metal: "Fire", Water: "Earth" };
+  const producedBy: Record<FiveElement, FiveElement> = { Wood: "Water", Fire: "Wood", Earth: "Fire", Metal: "Earth", Water: "Metal" };
+
+  const total = Object.values(balance).reduce((a, b) => a + b, 0);
+  const dmCount = balance[dayMaster];
+  const isStrong = dmCount >= total / 5 * 1.2;
+
+  let usefulElement: FiveElement;
+  let avoidElement: FiveElement;
+  let rationale: string;
+
+  if (isStrong) {
+    // Strong Day Master → weaken it: use the element it produces (exhaust), or the element that controls it
+    usefulElement = produces[dayMaster]; // Exhaust method
+    avoidElement = producedBy[dayMaster]; // Avoid what strengthens it
+    rationale = `Your ${dayMaster} Day Master is strong (${dmCount}/${total} element points). The "Useful God" (用神) is ${usefulElement} — it exhausts excess ${dayMaster} energy through productive flow. Avoid ${avoidElement} which would further strengthen an already dominant Day Master.`;
+  } else {
+    // Weak Day Master → strengthen it: use its parent element (what produces it), or same element
+    usefulElement = producedBy[dayMaster]; // Mother nurtures child
+    avoidElement = controlledBy[dayMaster]; // Avoid what attacks it
+    rationale = `Your ${dayMaster} Day Master is relatively weak (${dmCount}/${total} element points). The "Useful God" (用神) is ${usefulElement} — it nurtures and strengthens your Day Master through the productive cycle. Avoid ${avoidElement} which further weakens your core element.`;
+  }
+
+  return { usefulElement, avoidElement, rationale };
+}
+
+
+export function calculateBaZi(year: number, month: number, day: number, hour: number, rng: SeededRandom): BaZiResult {
   // Year pillar
   const yearStemIdx = (year - 4) % 10;
   const yearBranchIdx = (year - 4) % 12;
@@ -435,6 +719,11 @@ function calculateBaZi(year: number, month: number, day: number, hour: number, r
     Water: ["Indecisiveness", "Emotional overwhelm", "Fear of commitment"],
   };
 
+  // Calculate advanced BaZi components
+  const tenGods = calculateTenGods(dayStemIdx, yearPillar, monthPillar, dayPillar, hourPillar);
+  const shenSha = identifyShenSha(yearStemIdx, yearBranchIdx, monthBranchIdx, dayBranchIdx, hourBranchIdx, dayStemIdx);
+  const yongShen = calculateYongShen(balance, dayMaster, dominant, weakest);
+
   return {
     yearPillar,
     monthPillar,
@@ -448,6 +737,9 @@ function calculateBaZi(year: number, month: number, day: number, hour: number, r
     strengths: strengthsMap[dayMaster],
     challenges: challengesMap[dayMaster],
     luckCycles,
+    tenGods,
+    shenSha,
+    yongShen,
   };
 }
 
@@ -455,7 +747,7 @@ function calculateBaZi(year: number, month: number, day: number, hour: number, r
 // WETON / NEPTU (JAVANESE) CALCULATOR
 // ═══════════════════════════════════════════════════════════════
 
-function calculateWeton(dob: Date, rng: SeededRandom): WetonResult {
+export function calculateWeton(dob: Date, rng: SeededRandom): WetonResult {
   const dayIndex = dob.getDay();
   const dayOfWeek = DAY_NAMES[dayIndex];
 
@@ -847,6 +1139,8 @@ function generateYearlyPredictions(
         "Transformation is not always comfortable, but it is always purposeful. Trust the process.",
         "Your greatest growth this year comes from the intersection of discipline and creativity.",
       ]),
+      misfortune: generateMisfortuneIndex(rng, year, bazi, weton, zodiac),
+      adviceItems: generateYearlyAdvice(rng, year, bazi, zodiac, weton),
     });
   }
 
@@ -958,10 +1252,392 @@ function generateDecadePredictions(
         "Growth comes not from what you acquire, but from what you become.",
         "Trust in the timing of your life. Every decade serves a sacred purpose in your journey.",
       ]),
+      mortalityTheme: generateMortalityTheme(rng, decadeStart, bazi, weton),
+      strategies: generateDecadeStrategies(rng, decadeStart, bazi, zodiac, weton),
     });
   }
 
   return decades;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FENG SHUI — KUA NUMBER & DIRECTIONS
+// ═══════════════════════════════════════════════════════════════
+
+function calculateKuaNumber(year: number, gender: "male" | "female" | "other" | undefined): number {
+  const g = gender === "female" ? "female" : "male";
+  const digits = String(year).split("").reduce((s, d) => s + parseInt(d), 0);
+  let reduced = digits;
+  while (reduced > 9) reduced = String(reduced).split("").reduce((s, d) => s + parseInt(d), 0);
+  if (g === "male") {
+    let kua = 11 - reduced;
+    if (kua > 9) kua = kua - 9;
+    return kua === 5 ? 2 : kua;
+  } else {
+    let kua = reduced + 4;
+    if (kua > 9) kua = kua - 9;
+    return kua === 5 ? 8 : kua;
+  }
+}
+
+function calculateFengShui(year: number, gender: "male" | "female" | "other" | undefined, rng: SeededRandom): FengShuiResult {
+  const kua = calculateKuaNumber(year, gender);
+  const eastGroup = [1, 3, 4, 9];
+  const group: "East" | "West" = eastGroup.includes(kua) ? "East" : "West";
+
+  const directionSets: Record<number, { lucky: DirectionInfo[]; unlucky: DirectionInfo[] }> = {
+    1: {
+      lucky: [
+        { direction: "Southeast", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Best direction for wealth generation and career advancement." },
+        { direction: "East", category: "lucky", label: "Tian Yi (Health)", description: "Optimal direction for physical well-being and recovery." },
+        { direction: "South", category: "lucky", label: "Yan Nian (Relationships)", description: "Enhances romantic and social connections." },
+        { direction: "North", category: "lucky", label: "Fu Wei (Stability)", description: "Supports personal growth and inner clarity." },
+      ],
+      unlucky: [
+        { direction: "West", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Minor setbacks and frustrations may occur." },
+        { direction: "Northeast", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Risk of betrayal or hidden conflicts." },
+        { direction: "Northwest", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Legal or relational complications possible." },
+        { direction: "Southwest", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Most challenging direction — avoid for important activities." },
+      ],
+    },
+    2: {
+      lucky: [
+        { direction: "Northeast", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Best direction for wealth and success." },
+        { direction: "West", category: "lucky", label: "Tian Yi (Health)", description: "Supports healing and wellness." },
+        { direction: "Northwest", category: "lucky", label: "Yan Nian (Relationships)", description: "Strengthens bonds and partnerships." },
+        { direction: "Southwest", category: "lucky", label: "Fu Wei (Stability)", description: "Grounds energy and supports focus." },
+      ],
+      unlucky: [
+        { direction: "East", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Minor obstacles and delays." },
+        { direction: "Southeast", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Hidden adversaries or misunderstandings." },
+        { direction: "South", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Potential for conflicts and disruptions." },
+        { direction: "North", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Avoid for critical decisions." },
+      ],
+    },
+    3: {
+      lucky: [
+        { direction: "South", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Peak direction for career and financial growth." },
+        { direction: "North", category: "lucky", label: "Tian Yi (Health)", description: "Optimal for recovery and vitality." },
+        { direction: "Southeast", category: "lucky", label: "Yan Nian (Relationships)", description: "Positive for love and social harmony." },
+        { direction: "East", category: "lucky", label: "Fu Wei (Stability)", description: "Personal development and clarity." },
+      ],
+      unlucky: [
+        { direction: "Southwest", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Minor disruptions possible." },
+        { direction: "Northwest", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Watch for deception." },
+        { direction: "Northeast", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Relational friction likely." },
+        { direction: "West", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Most adverse — use caution." },
+      ],
+    },
+    4: {
+      lucky: [
+        { direction: "North", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Strongest wealth and opportunity direction." },
+        { direction: "South", category: "lucky", label: "Tian Yi (Health)", description: "Best for health and healing." },
+        { direction: "East", category: "lucky", label: "Yan Nian (Relationships)", description: "Enriches partnerships and connections." },
+        { direction: "Southeast", category: "lucky", label: "Fu Wei (Stability)", description: "Supports steady personal growth." },
+      ],
+      unlucky: [
+        { direction: "Northwest", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Small setbacks and annoyances." },
+        { direction: "Southwest", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Hidden challenges." },
+        { direction: "West", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Conflict potential." },
+        { direction: "Northeast", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Avoid for major choices." },
+      ],
+    },
+    6: {
+      lucky: [
+        { direction: "West", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Strongest direction for success and wealth." },
+        { direction: "Northeast", category: "lucky", label: "Tian Yi (Health)", description: "Optimal for wellness." },
+        { direction: "Southwest", category: "lucky", label: "Yan Nian (Relationships)", description: "Best for love and family bonds." },
+        { direction: "Northwest", category: "lucky", label: "Fu Wei (Stability)", description: "Personal clarity and peace." },
+      ],
+      unlucky: [
+        { direction: "Southeast", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Minor obstacles possible." },
+        { direction: "East", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Beware hidden adversaries." },
+        { direction: "North", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Potential relational conflicts." },
+        { direction: "South", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Most challenging — avoid." },
+      ],
+    },
+    7: {
+      lucky: [
+        { direction: "Northwest", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Best for wealth and advancement." },
+        { direction: "Southwest", category: "lucky", label: "Tian Yi (Health)", description: "Peak direction for health." },
+        { direction: "Northeast", category: "lucky", label: "Yan Nian (Relationships)", description: "Strengthens connections." },
+        { direction: "West", category: "lucky", label: "Fu Wei (Stability)", description: "Supports grounding and focus." },
+      ],
+      unlucky: [
+        { direction: "North", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Small setbacks likely." },
+        { direction: "South", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Hidden problems." },
+        { direction: "Southeast", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Conflict and disruption." },
+        { direction: "East", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Avoid for critical moves." },
+      ],
+    },
+    8: {
+      lucky: [
+        { direction: "Southwest", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Peak prosperity direction." },
+        { direction: "Northwest", category: "lucky", label: "Tian Yi (Health)", description: "Best for healing energy." },
+        { direction: "West", category: "lucky", label: "Yan Nian (Relationships)", description: "Enriches love and friendship." },
+        { direction: "Northeast", category: "lucky", label: "Fu Wei (Stability)", description: "Personal growth and clarity." },
+      ],
+      unlucky: [
+        { direction: "South", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Minor disruptions." },
+        { direction: "North", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Hidden challenges." },
+        { direction: "East", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Potential friction." },
+        { direction: "Southeast", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Most adverse direction." },
+      ],
+    },
+    9: {
+      lucky: [
+        { direction: "East", category: "lucky", label: "Sheng Qi (Prosperity)", description: "Strongest wealth direction." },
+        { direction: "Southeast", category: "lucky", label: "Tian Yi (Health)", description: "Best for vitality." },
+        { direction: "North", category: "lucky", label: "Yan Nian (Relationships)", description: "Enhances bonds." },
+        { direction: "South", category: "lucky", label: "Fu Wei (Stability)", description: "Supports inner clarity." },
+      ],
+      unlucky: [
+        { direction: "Northeast", category: "unlucky", label: "Huo Hai (Mishaps)", description: "Small obstacles." },
+        { direction: "West", category: "unlucky", label: "Wu Gui (Five Ghosts)", description: "Watch for deception." },
+        { direction: "Southwest", category: "unlucky", label: "Liu Sha (Six Killings)", description: "Conflict potential." },
+        { direction: "Northwest", category: "unlucky", label: "Jue Ming (Total Loss)", description: "Avoid for key decisions." },
+      ],
+    },
+  };
+
+  const dirs = directionSets[kua] || directionSets[1];
+  const elementColors: Record<FiveElement, string[]> = {
+    Wood: ["Green", "Brown", "Teal"],
+    Fire: ["Red", "Orange", "Purple"],
+    Earth: ["Yellow", "Beige", "Terracotta"],
+    Metal: ["White", "Gold", "Silver"],
+    Water: ["Blue", "Black", "Navy"],
+  };
+  const kuaElements: Record<number, FiveElement> = { 1: "Water", 2: "Earth", 3: "Wood", 4: "Wood", 6: "Metal", 7: "Metal", 8: "Earth", 9: "Fire" };
+  const luckyElement = kuaElements[kua] || "Earth";
+
+  const recommendations = [
+    `Position your desk or workspace facing your Sheng Qi direction (${dirs.lucky[0].direction}) for maximum career success.`,
+    `Sleep with your head pointing toward your Tian Yi direction (${dirs.lucky[1].direction}) for improved health and recovery.`,
+    `Enhance the ${dirs.lucky[2].direction} sector of your home with ${luckyElement} element colors to attract love and harmony.`,
+    `Avoid sitting with your back to your Jue Ming direction (${dirs.unlucky[3].direction}) during important meetings.`,
+    `Wear ${elementColors[luckyElement].join(" or ").toLowerCase()} tones to harmonize with your personal element energy.`,
+  ];
+
+  return {
+    kuaNumber: kua,
+    group,
+    luckyDirections: dirs.lucky,
+    unluckyDirections: dirs.unlucky,
+    luckyElement,
+    luckyColors: elementColors[luckyElement],
+    recommendations,
+    flyingStarExplainer: {
+      title: "Flying Star Feng Shui (Xuan Kong)",
+      overview: "Flying Star Feng Shui maps time-based energy patterns onto a Lo Shu grid using your home's facing direction and construction period. Nine 'stars' (numbered 1–9) rotate through sectors, each carrying distinct influences on wealth, relationships, and health. The chart changes every 20-year period and shifts annually.",
+      limitations: "A full Flying Star chart requires your home's exact facing direction and the year/period of construction — data this reading cannot collect. Without these inputs, we can provide general awareness but not a personalized house chart.",
+      advice: "For a complete Flying Star analysis, consult a qualified Feng Shui practitioner who can take compass readings of your home. In the meantime, focus on your personal Kua directions above, which require only your birth data.",
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MISFORTUNE & MORTALITY RULE PACK
+// ═══════════════════════════════════════════════════════════════
+
+function generateMisfortuneIndex(rng: SeededRandom, year: number, bazi: BaZiResult, weton: WetonResult, zodiac: WesternZodiac): MisfortuneIndex {
+  const seed = hashString(`misfortune-${year}-${bazi.dayMaster}-${weton.totalNeptu}`);
+  const localRng = new SeededRandom(seed);
+  const clashScore = localRng.nextInt(1, 10);
+  const neptuModifier = weton.totalNeptu > 14 ? -1 : weton.totalNeptu < 9 ? 1 : 0;
+  const score = Math.max(1, Math.min(10, clashScore + neptuModifier));
+
+  const themePool = [
+    "Financial turbulence — unexpected expenses or investment losses",
+    "Relationship friction — misunderstandings with close ones",
+    "Career instability — shifting dynamics at work or business",
+    "Health vulnerability — stress-related ailments or fatigue",
+    "Legal or contractual complications",
+    "Travel disruptions or relocation challenges",
+    "Trust issues — deception from unexpected sources",
+    "Emotional overwhelm — anxiety or decision fatigue",
+  ];
+  const triggerPool = [
+    "Overcommitting without adequate reserves",
+    "Ignoring early warning signs in health or finances",
+    "Rushing major decisions under pressure",
+    "Neglecting important relationships during busy periods",
+    "Taking on excessive risk without proper due diligence",
+  ];
+  const protectionPool = [
+    "Maintain emergency savings covering 3–6 months",
+    "Schedule regular health check-ups and wellness routines",
+    "Seek counsel before signing contracts or making large purchases",
+    "Practice daily mindfulness or meditation for emotional resilience",
+    "Strengthen communication with partner and family members",
+    "Diversify income sources to buffer financial shocks",
+    "Avoid impulsive travel or relocation decisions this period",
+  ];
+  const watchPool = [
+    "Sudden changes in workplace dynamics or team composition",
+    "Recurring health symptoms that persist beyond 2 weeks",
+    "Financial patterns that deviate significantly from expectations",
+    "Relationships that feel increasingly draining or one-sided",
+    "Unusual series of minor accidents or equipment failures",
+  ];
+
+  const numThemes = score > 7 ? 3 : score > 4 ? 2 : 1;
+  const themes = Array.from({ length: numThemes }, () => localRng.pick(themePool));
+  const triggers = Array.from({ length: 2 }, () => localRng.pick(triggerPool));
+  const protections = Array.from({ length: 3 }, () => localRng.pick(protectionPool));
+  const watchIndicators = Array.from({ length: 2 }, () => localRng.pick(watchPool));
+
+  return {
+    score,
+    themes: [...new Set(themes)],
+    triggers: [...new Set(triggers)],
+    protections: [...new Set(protections)],
+    watchIndicators: [...new Set(watchIndicators)],
+    explanation: `Misfortune index derived from ${bazi.dayMaster} Day Master interaction with ${year}'s annual energy, modulated by Neptu score (${weton.totalNeptu}) and ${zodiac.sign} cosmic tension points.`,
+    signalsUsed: ["Saju/BaZi Pillar Clash", "Weton Neptu Range", `${zodiac.sign} Annual Transit`],
+  };
+}
+
+function generateMortalityTheme(rng: SeededRandom, decadeStart: number, bazi: BaZiResult, weton: WetonResult): MortalityTheme {
+  const seed = hashString(`mortality-${decadeStart}-${bazi.dayMaster}-${weton.totalNeptu}`);
+  const localRng = new SeededRandom(seed);
+  const baseScore = localRng.nextInt(1, 10);
+  const ageModifier = decadeStart > 60 ? 2 : decadeStart > 40 ? 1 : -1;
+  const score = Math.max(1, Math.min(10, baseScore + ageModifier));
+
+  const themes = [
+    "A period of profound endings and new beginnings",
+    "Transition phase — closing one chapter to open another",
+    "Releasing old patterns to make space for renewal",
+    "Deep transformation through surrender and acceptance",
+    "A crossroads requiring clarity of purpose and courage",
+  ];
+  const softLabels = [
+    "Life Transitions & Renewal",
+    "Endings That Create Beginnings",
+    "Deep Cycle of Transformation",
+    "Release & Regeneration Phase",
+    "Crossroads of Purpose",
+  ];
+  const triggerPool = [
+    "Accumulated stress from overwork without recovery",
+    "Unresolved emotional patterns reaching critical mass",
+    "Environmental or lifestyle factors requiring attention",
+    "Neglecting preventive health measures over extended periods",
+    "Major life transitions creating compound stress",
+  ];
+  const protectionPool = [
+    "Regular preventive health screenings and proactive wellness",
+    "Building and maintaining a strong emotional support network",
+    "Practicing acceptance and emotional processing techniques",
+    "Estate and legacy planning for peace of mind",
+    "Developing spiritual practices that provide grounding and meaning",
+  ];
+
+  const idx = localRng.nextInt(0, themes.length - 1);
+  return {
+    score,
+    theme: themes[idx],
+    softLabel: softLabels[idx],
+    triggers: Array.from({ length: 2 }, () => localRng.pick(triggerPool)),
+    protections: Array.from({ length: 3 }, () => localRng.pick(protectionPool)),
+    explanation: `Mortality theme computed from ${bazi.dayMaster} Day Master life-cycle position, ${bazi.weakestElement} element vulnerability, and Weton Neptu gravitational pull (${weton.totalNeptu}).`,
+    signalsUsed: ["BaZi Luck Cycle Phase", `Weakest Element: ${bazi.weakestElement}`, "Weton Neptu Score"],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADVICE GENERATORS
+// ═══════════════════════════════════════════════════════════════
+
+function generateYearlyAdvice(rng: SeededRandom, year: number, bazi: BaZiResult, zodiac: WesternZodiac, weton: WetonResult): AdviceItem[] {
+  const seed = hashString(`advice-${year}-${bazi.dayMaster}-${weton.weton}`);
+  const localRng = new SeededRandom(seed);
+  const domains: Array<{ d: AdviceItem["domain"]; icon: string }> = [
+    { d: "wealth", icon: "Coins" },
+    { d: "love", icon: "Heart" },
+    { d: "social", icon: "Users" },
+    { d: "health", icon: "Activity" },
+    { d: "spiritual", icon: "Sparkles" },
+  ];
+  const suggestions: Record<AdviceItem["domain"], { s: string; d: string; dont: string }[]> = {
+    wealth: [
+      { s: "Prioritize building an emergency fund this year.", d: "Set up automatic monthly savings transfers.", dont: "Don't make large speculative investments without thorough research." },
+      { s: "Review and optimize your tax strategy.", d: "Consult a financial advisor for personalized planning.", dont: "Don't ignore small recurring expenses — they compound significantly." },
+      { s: "Invest in skills that increase your earning potential.", d: "Take a course or certification in a high-demand field.", dont: "Don't rely on a single income source during this period." },
+    ],
+    love: [
+      { s: "Prioritize quality time with your partner or loved ones.", d: "Schedule regular date nights or meaningful conversations.", dont: "Don't let work consume all your emotional energy." },
+      { s: "Practice active listening and emotional vulnerability.", d: "Share your feelings openly and ask about theirs.", dont: "Don't make assumptions about your partner's needs without asking." },
+      { s: "If single, expand your social circles authentically.", d: "Join interest-based communities where genuine connections form.", dont: "Don't rush into commitments — let relationships develop naturally." },
+    ],
+    social: [
+      { s: "Strengthen your inner circle — quality over quantity.", d: "Reach out to 2–3 close friends you've been meaning to reconnect with.", dont: "Don't spread yourself thin across too many social obligations." },
+      { s: "Take a leadership role in your community.", d: "Volunteer for a cause aligned with your values.", dont: "Don't engage in gossip or toxic group dynamics." },
+      { s: "Nurture family bonds during holidays and milestones.", d: "Create meaningful traditions that deepen family connection.", dont: "Don't neglect elderly family members — their wisdom is invaluable." },
+    ],
+    health: [
+      { s: "Establish a consistent exercise routine.", d: "Start with 20 minutes of movement daily and build from there.", dont: "Don't sacrifice sleep for productivity — it backfires." },
+      { s: "Address mental health proactively.", d: "Schedule regular therapy or counseling sessions.", dont: "Don't self-medicate or ignore persistent symptoms." },
+      { s: "Focus on nutrition and gut health.", d: "Add more whole foods and reduce processed food intake.", dont: "Don't skip regular health check-ups." },
+    ],
+    spiritual: [
+      { s: "Develop a daily meditation or mindfulness practice.", d: "Start with 5-minute sessions and increase gradually.", dont: "Don't seek spiritual growth to escape real-world responsibilities." },
+      { s: "Study the divination systems that resonate with you.", d: "Journal about how BaZi and Weton insights apply to your daily life.", dont: "Don't become rigidly attached to any single prediction framework." },
+      { s: "Practice gratitude as a daily ritual.", d: "Write down 3 things you're grateful for each morning.", dont: "Don't compare your spiritual journey to others'." },
+    ],
+  };
+
+  return domains.map(({ d, icon }) => {
+    const items = suggestions[d];
+    const item = items[localRng.nextInt(0, items.length - 1)];
+    return {
+      domain: d,
+      icon,
+      suggestion: item.s,
+      doAction: item.d,
+      dontAction: item.dont,
+      signalsUsed: [`BaZi ${bazi.dayMaster} Day Master`, `${zodiac.sign} Transit`, `Weton ${weton.weton}`],
+    };
+  });
+}
+
+function generateDecadeStrategies(rng: SeededRandom, decadeStart: number, bazi: BaZiResult, zodiac: WesternZodiac, weton: WetonResult): DecadeStrategy[] {
+  const seed = hashString(`strategy-${decadeStart}-${bazi.dayMaster}`);
+  const localRng = new SeededRandom(seed);
+  const templates: { domain: string; strategies: { s: string; r: string }[] }[] = [
+    { domain: "Career & Wealth", strategies: [
+      { s: "Build multiple income streams — diversify between active and passive revenue.", r: "Your element balance suggests vulnerability to single-source dependence." },
+      { s: "Invest in real estate or tangible assets during this decade.", r: "Earth and Metal influences favor physical asset accumulation." },
+      { s: "Position yourself as a domain expert and build thought leadership.", r: "Your BaZi pillar alignment supports authority-building in this period." },
+    ]},
+    { domain: "Relationships", strategies: [
+      { s: "Define clear relationship boundaries while remaining emotionally available.", r: "Your Weton energy pattern suggests both deep connection needs and overwhelm risk." },
+      { s: "Invest in partnerships that align with shared long-term vision.", r: "Zodiac and BaZi signals converge on the importance of aligned values." },
+    ]},
+    { domain: "Social & Community", strategies: [
+      { s: "Build a mentorship network — both as mentor and mentee.", r: "Your luck cycle position favors knowledge transfer relationships." },
+      { s: "Engage in community service that aligns with your elemental strengths.", r: "Social contribution amplifies your positive Neptu energy." },
+    ]},
+    { domain: "Health & Longevity", strategies: [
+      { s: "Establish preventive health protocols appropriate for this life stage.", r: "Your weakest element signals potential vulnerability — proactive care is essential." },
+      { s: "Balance high-intensity pursuits with restorative practices.", r: "Your Weton Neptu score suggests the need for energy management." },
+    ]},
+    { domain: "Legacy & Purpose", strategies: [
+      { s: "Begin documenting and sharing the wisdom you've accumulated.", r: "Your BaZi luck cycle approaches a phase where teaching amplifies your influence." },
+      { s: "Align major life decisions with your deepest values, not external expectations.", r: "Zodiac and Saju signals indicate maximum fulfillment through authentic expression." },
+    ]},
+  ];
+
+  return templates.map(({ domain, strategies }) => {
+    const strat = strategies[localRng.nextInt(0, strategies.length - 1)];
+    return {
+      domain,
+      strategy: strat.s,
+      rationale: strat.r,
+      signalsUsed: [`BaZi ${bazi.dayMaster}`, `${zodiac.sign} Cycle`, `Neptu ${weton.totalNeptu}`],
+    };
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -994,6 +1670,7 @@ export function generateReading(profile: BirthProfile): ReadingResult {
   const numerology = calculateNumerology(profile.fullName);
 
   const currentYear = new Date().getFullYear();
+  const fengShui = calculateFengShui(year, profile.gender, rng);
   const coreDomains = generateCoreDomains(rng, bazi, westernZodiac, weton);
   const yearlyPredictions = generateYearlyPredictions(rng, year, bazi, westernZodiac, weton, currentYear);
   const decadePredictions = generateDecadePredictions(rng, year, bazi, westernZodiac, weton);
@@ -1005,6 +1682,7 @@ export function generateReading(profile: BirthProfile): ReadingResult {
     bazi,
     weton,
     numerology,
+    fengShui,
     coreDomains,
     yearlyPredictions,
     decadePredictions,

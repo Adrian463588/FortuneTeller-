@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a0f35"/>
+      <stop offset="100%" stop-color="#0a0613"/>
+    </radialGradient>
+    <radialGradient id="ballGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#f0d78c" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#d4a853" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#1a0f35" stop-opacity="0.9"/>
+    </radialGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#d4a853" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#d4a853" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="starGlow">
+      <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners for maskable -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGrad)"/>
+
+  <!-- Subtle background stars -->
+  <g fill="#d4a853" opacity="0.35">
+    <circle cx="80" cy="66" r="4"/>
+    <circle cx="440" cy="80" r="3"/>
+    <circle cx="468" cy="148" r="4"/>
+    <circle cx="55" cy="185" r="3"/>
+    <circle cx="460" cy="372" r="3"/>
+    <circle cx="65" cy="415" r="3"/>
+    <circle cx="210" cy="45" r="2.5"/>
+    <circle cx="390" cy="50" r="2.5"/>
+  </g>
+
+  <!-- Outer glow halo -->
+  <circle cx="256" cy="296" r="182" fill="url(#glowGrad)"/>
+
+  <!-- Crystal ball body -->
+  <circle cx="256" cy="296" r="148" fill="url(#ballGrad)" opacity="0.95"/>
+
+  <!-- Specular highlight -->
+  <ellipse cx="212" cy="234" rx="48" ry="32" fill="white" opacity="0.16"/>
+
+  <!-- Ball rim -->
+  <circle cx="256" cy="296" r="148" fill="none" stroke="#d4a853" stroke-width="3" opacity="0.4"/>
+
+  <!-- Inner atmosphere -->
+  <circle cx="256" cy="296" r="138" fill="none" stroke="#9b59b6" stroke-width="2" opacity="0.15"/>
+
+  <!-- Crescent moon -->
+  <g filter="url(#glow)">
+    <circle cx="247" cy="296" r="58" fill="#6d3a9d" opacity="0.82"/>
+    <circle cx="272" cy="282" r="47" fill="#0f0a20" opacity="0.95"/>
+  </g>
+
+  <!-- Stars inside ball -->
+  <g filter="url(#starGlow)">
+    <circle cx="192" cy="254" r="9" fill="#f0d78c" opacity="0.9"/>
+    <circle cx="322" cy="246" r="8" fill="#f0d78c" opacity="0.85"/>
+    <circle cx="334" cy="340" r="9" fill="#f0d78c" opacity="0.8"/>
+    <circle cx="186" cy="336" r="7.5" fill="#f0d78c" opacity="0.75"/>
+    <circle cx="256" cy="202" r="5.5" fill="#f0d78c" opacity="0.7"/>
+    <circle cx="290" cy="315" r="4" fill="#f0d78c" opacity="0.6"/>
+    <circle cx="222" cy="318" r="4" fill="#00e5ff" opacity="0.5"/>
+    <circle cx="310" cy="264" r="3.5" fill="#00e5ff" opacity="0.45"/>
+  </g>
+
+  <!-- Stand base -->
+  <rect x="206" y="436" width="100" height="20" rx="10" fill="#d4a853" opacity="0.55"/>
+  <rect x="228" y="422" width="56" height="20" rx="8" fill="#d4a853" opacity="0.45"/>
+  <!-- Leg connecting ball to stand -->
+  <rect x="248" y="442" width="16" height="8" rx="4" fill="#d4a853" opacity="0.3"/>
+
+  <!-- Sparkle above ball -->
+  <g filter="url(#starGlow)" transform="translate(256, 96)">
+    <line x1="0" y1="-32" x2="0" y2="32" stroke="#f0d78c" stroke-width="5" opacity="0.75"/>
+    <line x1="-32" y1="0" x2="32" y2="0" stroke="#f0d78c" stroke-width="5" opacity="0.75"/>
+    <line x1="-22" y1="-22" x2="22" y2="22" stroke="#f0d78c" stroke-width="3" opacity="0.45"/>
+    <line x1="22" y1="-22" x2="-22" y2="22" stroke="#f0d78c" stroke-width="3" opacity="0.45"/>
+    <circle cx="0" cy="0" r="8" fill="#f0d78c" opacity="0.9"/>
+  </g>
+
+  <!-- Corner sparkles -->
+  <g filter="url(#starGlow)">
+    <circle cx="112" cy="112" r="8" fill="#9b59b6" opacity="0.6"/>
+    <circle cx="400" cy="112" r="6" fill="#9b59b6" opacity="0.55"/>
+    <circle cx="400" cy="408" r="8" fill="#9b59b6" opacity="0.6"/>
+    <circle cx="112" cy="408" r="6" fill="#9b59b6" opacity="0.55"/>
+  </g>
+</svg>

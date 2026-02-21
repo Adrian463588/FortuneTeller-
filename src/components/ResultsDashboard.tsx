@@ -8,6 +8,8 @@ import {
   Moon,
   CalendarDays,
   Milestone,
+  Compass,
+  Heart,
   ArrowLeft,
 } from "lucide-react";
 import type { ReadingResult } from "@/utils/types";
@@ -16,13 +18,17 @@ import PersonalityTab from "./tabs/PersonalityTab";
 import JavaneseTab from "./tabs/JavaneseTab";
 import YearlyTab from "./tabs/YearlyTab";
 import DecadeTab from "./tabs/DecadeTab";
+import FengShuiTab from "./tabs/FengShuiTab";
+import MatchesTab from "./tabs/MatchesTab";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "personality", label: "Personality", icon: User },
   { id: "javanese", label: "Javanese", icon: Moon },
+  { id: "fengshui", label: "Feng Shui", icon: Compass },
   { id: "yearly", label: "Yearly", icon: CalendarDays },
   { id: "decade", label: "Decade", icon: Milestone },
+  { id: "matches", label: "Matches", icon: Heart },
 ];
 
 interface ResultsDashboardProps {
@@ -113,8 +119,10 @@ export default function ResultsDashboard({ reading, onReset }: ResultsDashboardP
           {activeTab === "overview" && <OverviewTab key="overview" reading={reading} />}
           {activeTab === "personality" && <PersonalityTab key="personality" reading={reading} />}
           {activeTab === "javanese" && <JavaneseTab key="javanese" reading={reading} />}
+          {activeTab === "fengshui" && <FengShuiTab key="fengshui" reading={reading} />}
           {activeTab === "yearly" && <YearlyTab key="yearly" reading={reading} />}
           {activeTab === "decade" && <DecadeTab key="decade" reading={reading} />}
+          {activeTab === "matches" && <MatchesTab key="matches" reading={reading} />}
         </AnimatePresence>
       </div>
     </motion.div>

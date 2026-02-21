@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a0f35"/>
+      <stop offset="100%" stop-color="#0a0613"/>
+    </radialGradient>
+    <radialGradient id="ballGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#f0d78c" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#d4a853" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#1a0f35" stop-opacity="0.9"/>
+    </radialGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#d4a853" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#d4a853" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="starGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="192" height="192" rx="36" fill="url(#bgGrad)"/>
+
+  <!-- Subtle background stars -->
+  <g fill="#d4a853" opacity="0.3">
+    <circle cx="30" cy="25" r="1.5"/>
+    <circle cx="165" cy="30" r="1"/>
+    <circle cx="175" cy="55" r="1.5"/>
+    <circle cx="20" cy="70" r="1"/>
+    <circle cx="170" cy="140" r="1.2"/>
+    <circle cx="25" cy="155" r="1"/>
+  </g>
+
+  <!-- Outer glow halo around ball -->
+  <circle cx="96" cy="110" r="68" fill="url(#glowGrad)"/>
+
+  <!-- Crystal ball body -->
+  <circle cx="96" cy="110" r="56" fill="url(#ballGrad)" opacity="0.95"/>
+
+  <!-- Ball highlight (specular reflection) -->
+  <ellipse cx="80" cy="88" rx="18" ry="12" fill="white" opacity="0.16"/>
+
+  <!-- Ball rim border -->
+  <circle cx="96" cy="110" r="56" fill="none" stroke="#d4a853" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Inner atmosphere glow -->
+  <circle cx="96" cy="110" r="52" fill="none" stroke="#9b59b6" stroke-width="1" opacity="0.15"/>
+
+  <!-- Crescent moon inside ball -->
+  <g filter="url(#glow)">
+    <circle cx="93" cy="110" r="22" fill="#6d3a9d" opacity="0.8"/>
+    <circle cx="102" cy="105" r="18" fill="#0f0a20" opacity="0.95"/>
+  </g>
+
+  <!-- Stars inside the ball -->
+  <g filter="url(#starGlow)">
+    <!-- Star 1 -->
+    <circle cx="72" cy="95" r="3.5" fill="#f0d78c" opacity="0.9"/>
+    <!-- Star 2 -->
+    <circle cx="121" cy="92" r="3" fill="#f0d78c" opacity="0.85"/>
+    <!-- Star 3 -->
+    <circle cx="125" cy="128" r="3.5" fill="#f0d78c" opacity="0.8"/>
+    <!-- Star 4 -->
+    <circle cx="70" cy="126" r="2.8" fill="#f0d78c" opacity="0.75"/>
+    <!-- Star 5 small -->
+    <circle cx="96" cy="76" r="2.2" fill="#f0d78c" opacity="0.7"/>
+    <!-- Extra tiny sparkles -->
+    <circle cx="108" cy="118" r="1.5" fill="#f0d78c" opacity="0.6"/>
+    <circle cx="83" cy="118" r="1.5" fill="#00e5ff" opacity="0.5"/>
+  </g>
+
+  <!-- Ball stand / pedestal -->
+  <rect x="78" y="164" width="36" height="7" rx="3.5" fill="#d4a853" opacity="0.55"/>
+  <rect x="86" y="159" width="20" height="8" rx="3" fill="#d4a853" opacity="0.45"/>
+
+  <!-- Sparkle / star above ball -->
+  <g filter="url(#starGlow)" transform="translate(96, 36)">
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="#f0d78c" stroke-width="2" opacity="0.8"/>
+    <line x1="-12" y1="0" x2="12" y2="0" stroke="#f0d78c" stroke-width="2" opacity="0.8"/>
+    <line x1="-8" y1="-8" x2="8" y2="8" stroke="#f0d78c" stroke-width="1.2" opacity="0.5"/>
+    <line x1="8" y1="-8" x2="-8" y2="8" stroke="#f0d78c" stroke-width="1.2" opacity="0.5"/>
+    <circle cx="0" cy="0" r="3" fill="#f0d78c" opacity="0.9"/>
+  </g>
+
+  <!-- Outer corner sparkles -->
+  <g fill="#9b59b6" opacity="0.6" filter="url(#starGlow)">
+    <circle cx="42" cy="42" r="3"/>
+    <circle cx="150" cy="42" r="2.5"/>
+    <circle cx="150" cy="152" r="3"/>
+    <circle cx="42" cy="152" r="2.5"/>
+  </g>
+</svg>

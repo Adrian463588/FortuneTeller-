@@ -1,0 +1,31 @@
+{
+  "name": "Fortune Teller — Mystical Divination",
+  "short_name": "Fortune Teller",
+  "description": "Unveil your cosmic destiny through Saju Palja, BaZi, Western Zodiac, Javanese Primbon, and Feng Shui.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0613",
+  "theme_color": "#0a0613",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["entertainment", "lifestyle"],
+  "lang": "en"
+}

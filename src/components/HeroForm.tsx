@@ -1,33 +1,96 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Sparkles, User, Calendar, Clock } from "lucide-react";
-import { useState } from "react";
+import { motion, useAnimation } from "framer-motion";
+import { Sparkles, User, Calendar, Clock, Users } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface HeroFormProps {
-  onSubmit: (data: { fullName: string; dateOfBirth: string; timeOfBirth: string }) => void;
+  onSubmit: (data: { fullName: string; dateOfBirth: string; timeOfBirth: string; gender: "male" | "female" }) => void;
   isLoading: boolean;
 }
+
+// Only allow letters (incl. unicode), spaces, hyphens, apostrophes
+const NAME_REGEX = /^[\p{L}\s'\-]+$/u;
+const NAME_MAX_LENGTH = 100;
+
+const shakeVariants = {
+  shake: {
+    x: [0, -8, 8, -6, 6, -3, 3, 0],
+    transition: { duration: 0.4 },
+  },
+  idle: { x: 0 },
+};
 
 export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
   const [fullName, setFullName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [timeOfBirth, setTimeOfBirth] = useState("");
+  const [gender, setGender] = useState<"male" | "female">("male");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const nameControls = useAnimation();
+  const dobControls = useAnimation();
+
+  // Today's date as YYYY-MM-DD for max constraint
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
+  const triggerShake = (field: string) => {
+    const ctrl = field === "fullName" ? nameControls : dobControls;
+    ctrl.start("shake").then(() => ctrl.start("idle"));
+  };
+
+  // Filter name input: collapse multiple spaces, enforce max length
+  const handleNameChange = (value: string) => {
+    const cleaned = value.replace(/\s{2,}/g, " ").slice(0, NAME_MAX_LENGTH);
+    setFullName(cleaned);
+    if (errors.fullName) setErrors((p) => ({ ...p, fullName: "" }));
+  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!fullName.trim()) newErrors.fullName = "Please enter your full name";
-    if (fullName.trim().length < 2) newErrors.fullName = "Name must be at least 2 characters";
-    if (!dateOfBirth) newErrors.dateOfBirth = "Please enter your date of birth";
+    const trimmedName = fullName.trim();
+
+    // Name validation
+    if (!trimmedName) {
+      newErrors.fullName = "Please enter your full name.";
+    } else if (trimmedName.length < 2) {
+      newErrors.fullName = "Name must be at least 2 characters.";
+    } else if (!NAME_REGEX.test(trimmedName)) {
+      newErrors.fullName = "Name can only contain letters, spaces, hyphens, and apostrophes.";
+    }
+
+    // DOB validation
+    if (!dateOfBirth) {
+      newErrors.dateOfBirth = "Please enter your date of birth.";
+    } else {
+      const dob = new Date(dateOfBirth);
+      const minDate = new Date("1900-01-01");
+      const maxDate = new Date();
+      if (isNaN(dob.getTime())) {
+        newErrors.dateOfBirth = "Please enter a valid date.";
+      } else if (dob < minDate) {
+        newErrors.dateOfBirth = "Date must be after January 1, 1900.";
+      } else if (dob > maxDate) {
+        newErrors.dateOfBirth = "Date cannot be in the future.";
+      }
+    }
+
     setErrors(newErrors);
+
+    // Trigger shake on invalid fields
+    if (newErrors.fullName) triggerShake("fullName");
+    if (newErrors.dateOfBirth) triggerShake("dateOfBirth");
+
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      onSubmit({ fullName: fullName.trim(), dateOfBirth, timeOfBirth });
+      onSubmit({ fullName: fullName.trim().replace(/\s{2,}/g, " "), dateOfBirth, timeOfBirth, gender });
     }
   };
 
@@ -35,6 +98,7 @@ export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -30 }}
       transition={{ duration: 0.8 }}
       className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
     >
@@ -75,8 +139,9 @@ export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
         <p className="text-text-secondary max-w-lg mx-auto text-sm md:text-base leading-relaxed">
           Harness the ancient wisdom of <span className="text-accent-gold">Saju Palja</span>,{" "}
           <span className="text-accent-cyan">BaZi</span>,{" "}
-          <span className="text-accent-purple">Western Zodiac</span>, and{" "}
-          <span className="text-accent-gold-light">Javanese Primbon</span> to reveal the cosmic blueprint of your life.
+          <span className="text-accent-purple">Western Zodiac</span>,{" "}
+          <span className="text-accent-gold-light">Javanese Primbon</span>, and{" "}
+          <span className="text-emerald-400">Feng Shui</span> to reveal the cosmic blueprint of your life.
         </p>
       </motion.div>
 
@@ -101,24 +166,30 @@ export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
             <label className="flex items-center gap-2 text-xs text-text-secondary mb-2 uppercase tracking-wider">
               <User className="w-3.5 h-3.5 text-accent-gold" />
               Full Name
+              <span className="ml-auto text-text-muted normal-case tracking-normal">{fullName.length}/{NAME_MAX_LENGTH}</span>
             </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => {
-                setFullName(e.target.value);
-                if (errors.fullName) setErrors((p) => ({ ...p, fullName: "" }));
-              }}
-              placeholder="Enter your birth name..."
-              className="input-mystic w-full px-4 py-3 rounded-xl text-sm"
-            />
+            <motion.div variants={shakeVariants} animate={nameControls}>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                maxLength={NAME_MAX_LENGTH}
+                placeholder="Enter your birth name..."
+                className="input-mystic w-full px-4 py-3 rounded-xl text-sm"
+                style={{ borderColor: errors.fullName ? "rgba(248,113,113,0.5)" : undefined }}
+                aria-invalid={!!errors.fullName}
+                aria-describedby={errors.fullName ? "name-error" : undefined}
+              />
+            </motion.div>
             {errors.fullName && (
               <motion.p
+                id="name-error"
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-xs mt-1"
+                className="text-red-400 text-xs mt-1.5 font-semibold"
+                role="alert"
               >
-                {errors.fullName}
+                ⚠ {errors.fullName}
               </motion.p>
             )}
           </div>
@@ -129,23 +200,31 @@ export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
               <Calendar className="w-3.5 h-3.5 text-accent-gold" />
               Date of Birth
             </label>
-            <input
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => {
-                setDateOfBirth(e.target.value);
-                if (errors.dateOfBirth) setErrors((p) => ({ ...p, dateOfBirth: "" }));
-              }}
-              className="input-mystic w-full px-4 py-3 rounded-xl text-sm"
-              style={{ colorScheme: "dark" }}
-            />
+            <motion.div variants={shakeVariants} animate={dobControls}>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => {
+                  setDateOfBirth(e.target.value);
+                  if (errors.dateOfBirth) setErrors((p) => ({ ...p, dateOfBirth: "" }));
+                }}
+                min="1900-01-01"
+                max={today}
+                className="input-mystic w-full px-4 py-3 rounded-xl text-sm"
+                style={{ colorScheme: "dark", borderColor: errors.dateOfBirth ? "rgba(248,113,113,0.5)" : undefined }}
+                aria-invalid={!!errors.dateOfBirth}
+                aria-describedby={errors.dateOfBirth ? "dob-error" : undefined}
+              />
+            </motion.div>
             {errors.dateOfBirth && (
               <motion.p
+                id="dob-error"
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-xs mt-1"
+                className="text-red-400 text-xs mt-1.5 font-semibold"
+                role="alert"
               >
-                {errors.dateOfBirth}
+                ⚠ {errors.dateOfBirth}
               </motion.p>
             )}
           </div>
@@ -164,6 +243,38 @@ export default function HeroForm({ onSubmit, isLoading }: HeroFormProps) {
               className="input-mystic w-full px-4 py-3 rounded-xl text-sm"
               style={{ colorScheme: "dark" }}
             />
+          </div>
+
+          {/* Gender Selector */}
+          <div>
+            <label className="flex items-center gap-2 text-xs text-text-secondary mb-2 uppercase tracking-wider">
+              <Users className="w-3.5 h-3.5 text-accent-gold" />
+              Gender{" "}
+              <span className="text-text-muted normal-case tracking-normal">(for Kua number calculation)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {(["male", "female"] as const).map((g) => (
+                <motion.button
+                  key={g}
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setGender(g)}
+                  className="py-2.5 rounded-xl text-sm font-semibold capitalize transition-all"
+                  style={{
+                    background: gender === g
+                      ? "linear-gradient(135deg, rgba(212,168,83,0.3), rgba(155,89,182,0.3))"
+                      : "rgba(17,13,31,0.6)",
+                    border: gender === g
+                      ? "1px solid rgba(212,168,83,0.4)"
+                      : "1px solid rgba(212,168,83,0.1)",
+                    color: gender === g ? "var(--accent-gold-light)" : "var(--text-secondary)",
+                  }}
+                >
+                  {g}
+                </motion.button>
+              ))}
+            </div>
           </div>
 
           {/* Submit Button */}
