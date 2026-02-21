@@ -1,6 +1,6 @@
 # Mystical Fortune Teller 🔮
 
-> ### 🌐 **[Click Here to Play the Live Demo](https://fortuneteller-79okgmypch.edgeone.dev/)**
+> ### 🌐 **[Click Here to Play the Live Demo](https://fortuneteller.edgeone.dev/)**
 > *Experience the mystical divination engine in your browser right now!*
 
 A modern, database-free web application that generates personalized, highly detailed divination readings and compatibility matching using a combination of ancient world traditions. Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion.
