@@ -1,5 +1,7 @@
 # Mystical Fortune Teller 🔮
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Play_Now-9b59b6?style=for-the-badge&logo=next.js)](https://fortuneteller-79okgmypch.edgeone.dev/)
+
 A modern, database-free web application that generates personalized, highly detailed divination readings and compatibility matching using a combination of ancient world traditions. Built with Next.js, TypeScript, Tailwind CSS, and Framer Motion.
 
 ## 🌟 Overview
